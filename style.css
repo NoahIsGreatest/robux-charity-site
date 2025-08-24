@@ -1,69 +1,146 @@
 /* style.css */
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f4f4;
+    font-family: 'Roboto', Arial, sans-serif;
+    background: linear-gradient(135deg, #00b4db, #0083b0);
     margin: 0;
     padding: 0;
     display: flex;
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-}
-
-.container {
-    background-color: white;
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    max-width: 400px;
-    width: 100%;
-    text-align: center;
-}
-
-h1 {
     color: #333;
 }
 
-p {
-    color: #666;
+.container {
+    background-color: rgba(255, 255, 255, 0.95);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    max-width: 450px;
+    width: 100%;
+    text-align: center;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+h1 {
+    color: #0083b0;
+    margin-bottom: 15px;
+    font-size: 28px;
+}
+
+.intro {
+    color: #555;
+    margin-bottom: 25px;
+    font-size: 14px;
 }
 
 form {
-    margin-bottom: 20px;
+    margin-bottom: 25px;
 }
 
 label {
     display: block;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     color: #333;
+    font-weight: bold;
 }
 
-input[type="text"] {
+input[type="text"], input[type="number"] {
     width: 100%;
-    padding: 8px;
-    margin-bottom: 12px;
+    padding: 12px;
+    margin-bottom: 15px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 6px;
     box-sizing: border-box;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+input[type="text"]:focus, input[type="number"]:focus {
+    border-color: #0083b0;
+    outline: none;
 }
 
 button {
-    background-color: #4CAF50;
+    background-color: #00b4db;
     color: white;
-    padding: 10px 15px;
+    padding: 12px 20px;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     font-size: 16px;
+    font-weight: bold;
+    transition: background-color 0.3s, transform 0.2s;
+    margin: 10px 0;
 }
 
 button:hover {
-    background-color: #45a049;
+    background-color: #0083b0;
+    transform: translateY(-2px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+.profile {
+    margin-bottom: 20px;
+}
+
+.avatar {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    border: 3px solid #00b4db;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.credits {
+    font-size: 18px;
+    font-weight: bold;
+    color: #0083b0;
+    margin-bottom: 20px;
+}
+
+.ad-section {
+    margin-bottom: 30px;
 }
 
 #ad-container {
-    margin-top: 20px;
+    margin-top: 15px;
     border: 1px solid #ddd;
     padding: 10px;
-    border-radius: 4px;
+    border-radius: 6px;
+    background-color: #f9f9f9;
+}
+
+.withdraw-section {
+    margin-top: 20px;
+}
+
+#withdraw {
+    background-color: #4CAF50;
+}
+
+#withdraw:hover {
+    background-color: #45a049;
+}
+
+.message {
+    margin-top: 10px;
+    font-size: 14px;
+}
+
+.message.success {
+    color: #4CAF50;
+}
+
+.message.error {
+    color: #f44336;
 }
