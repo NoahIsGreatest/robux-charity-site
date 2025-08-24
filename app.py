@@ -1,97 +1,81 @@
-# app.py
-from flask import Flask, render_template, request, jsonify
 import csv
 import os
-from datetime import datetime
-import requests
+from datetime import datetime, timedelta
+from flask import Flask, request, jsonify, session, send_from_directory, render_template
 
-app = Flask(__name__)
 
-CSV_FILE = 'requests.csv'
+APP_SECRET = os.environ.get("APP_SECRET", "change-me-please")
+CSV_PATH = os.environ.get("CSV_PATH", "requests.csv")
+CREDIT_INCREMENT = 0.5
+WITHDRAW_MIN = 7
+WITHDRAW_MAX = 80
+WITHDRAW_COOLDOWN_DAYS = 3
 
-# Initialize CSV if not exists
-if not os.path.exists(CSV_FILE):
-    with open(CSV_FILE, 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(['username', 'type', 'amount', 'timestamp'])
 
-def get_total_credits(username):
-    total = 0.0
-    if os.path.exists(CSV_FILE):
-        with open(CSV_FILE, 'r') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                if row['username'] == username:
-                    if row['type'] == 'earn':
-                        total += float(row['amount'])
-                    elif row['type'] == 'withdraw':
-                        total -= float(row['amount'])
-    return total
+app = Flask(__name__, static_folder="static", template_folder="templates")
+app.secret_key = APP_SECRET
 
-@app.route('/')
-def index():
-    return render_template('index.html')
 
-@app.route('/get_avatar', methods=['POST'])
-def get_avatar():
-    data = request.json
-    username = data.get('username')
-    if username:
-        # Get user ID from username
-        api_response = requests.post('https://users.roblox.com/v1/usernames/users', json={"usernames": [username], "excludeBannedUsers": True})
-        if api_response.status_code == 200:
-            user_data = api_response.json()
-            if user_data.get('data') and len(user_data['data']) > 0:
-                user_id = user_data['data'][0]['id']
-                # Get avatar headshot
-                avatar_response = requests.get(f'https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds={user_id}&size=150x150&format=Png&isCircular=false')
-                if avatar_response.status_code == 200:
-                    avatar_data = avatar_response.json()
-                    if avatar_data.get('data') and len(avatar_data['data']) > 0:
-                        avatar_url = avatar_data['data'][0]['imageUrl']
-                        return jsonify({'avatar_url': avatar_url})
-    return jsonify({'error': 'User not found'}), 404
+# Ensure CSV has a header
+CSV_HEADER = [
+"timestamp", "username", "action", "amount", "balance", "note"
+]
 
-@app.route('/get_credits', methods=['POST'])
-def get_credits():
-    data = request.json
-    username = data.get('username')
-    if username:
-        total_credits = get_total_credits(username)
-        return jsonify({'credits': total_credits})
-    return jsonify({'error': 'No username provided'}), 400
 
-@app.route('/watch_ad', methods=['POST'])
-def watch_ad():
-    data = request.json
-    username = data.get('username')
-    if username:
-        amount = 0.5
-        timestamp = datetime.now().isoformat()
-        with open(CSV_FILE, 'a', newline='') as f:
-            writer = csv.writer(f)
-            writer.writerow([username, 'earn', amount, timestamp])
-        total_credits = get_total_credits(username)
-        return jsonify({'credits': total_credits})
-    return jsonify({'error': 'No username provided'}), 400
+def ensure_csv():
+if not os.path.exists(CSV_PATH):
+with open(CSV_PATH, "w", newline="", encoding="utf-8") as f:
+writer = csv.writer(f)
+writer.writerow(CSV_HEADER)
 
-@app.route('/withdraw', methods=['POST'])
-def withdraw():
-    data = request.json
-    username = data.get('username')
-    amount = data.get('amount')
-    if username and amount > 0:
-        total = get_total_credits(username)
-        if total >= amount:
-            timestamp = datetime.now().isoformat()
-            with open(CSV_FILE, 'a', newline='') as f:
-                writer = csv.writer(f)
-                writer.writerow([username, 'withdraw', amount, timestamp])
-            new_total = get_total_credits(username)
-            return jsonify({'credits': new_total})
-        else:
-            return jsonify({'error': 'Insufficient credits'}), 400
-    return jsonify({'error': 'Invalid request'}), 400
 
-if __name__ == '__main__':
-    app.run(debug=True)
+
+
+def append_row(username: str, action: str, amount: float | None, balance: float | None, note: str = ""):
+ensure_csv()
+with open(CSV_PATH, "a", newline="", encoding="utf-8") as f:
+writer = csv.writer(f)
+writer.writerow([
+datetime.utcnow().isoformat(), username, action,
+("" if amount is None else f"{amount:.2f}"),
+("" if balance is None else f"{balance:.2f}"), note
+])
+
+
+
+
+def get_user_events(username: str):
+ensure_csv()
+events = []
+if not os.path.exists(CSV_PATH):
+return events
+with open(CSV_PATH, "r", newline="", encoding="utf-8") as f:
+reader = csv.DictReader(f)
+for row in reader:
+if row.get("username") == username:
+events.append(row)
+return events
+
+
+
+
+def current_balance(username: str) -> float:
+events = get_user_events(username)
+# Balance is derived from the last non-empty balance field; if missing, recompute
+last_with_balance = None
+for row in events:
+if row.get("balance"):
+last_with_balance = float(row["balance"]) # keep updating
+if last_with_balance is not None:
+return last_with_balance
+
+
+# Fallback recompute from actions
+bal = 0.0
+for row in events:
+action = row.get("action", "")
+if action == "credit":
+bal += float(row.get("amount") or 0)
+elif action == "withdraw":
+bal -= float(row.get("amount") or 0)
+app.run(host="0.0.0.0", port=port, debug=True)
