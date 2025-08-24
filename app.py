@@ -1,69 +1,58 @@
-from flask import Flask, request, jsonify, send_from_directory
-import json
-import time
-import os
+from flask import Flask, request, jsonify, render_template
+import csv, os, time
 
 app = Flask(__name__)
 
-USERS_FILE = 'users.json'
+CSV_FILE = "requests.csv"
 
-def load_users():
-    if not os.path.exists(USERS_FILE):
-        return {}
-    with open(USERS_FILE, 'r') as f:
-        return json.load(f)
-
-def save_users(users):
-    with open(USERS_FILE, 'w') as f:
-        json.dump(users, f)
-
-@app.route('/')
+@app.route("/")
 def index():
-    return send_from_directory('.', 'index.html')
+    return app.send_static_file("index.html")
 
-@app.route('/style.css')
-def style():
-    return send_from_directory('.', 'style.css')
+@app.route("/save", methods=["POST"])
+def save():
+    data = request.json
+    username = data["username"]
+    balance = data["balance"]
+    ads = data["adsWatched"]
 
-@app.route('/watch_ad', methods=['POST'])
-def watch_ad():
-    username = request.json.get('username')
-    users = load_users()
-    if username not in users:
-        users[username] = {'credits': 0, 'last_withdraw': 0, 'ads_watched': 0}
+    file_exists = os.path.isfile(CSV_FILE)
+    with open(CSV_FILE, "a", newline="") as f:
+        writer = csv.writer(f)
+        if not file_exists:
+            writer.writerow(["username", "balance", "adsWatched", "lastWithdraw"])
+        writer.writerow([username, balance, ads, "0"])
+    return jsonify({"status": "saved"})
 
-    users[username]['credits'] += 0.5
-    users[username]['ads_watched'] += 1
-    save_users(users)
-    return jsonify({'credits': users[username]['credits'], 'ads_watched': users[username]['ads_watched']})
-
-@app.route('/withdraw', methods=['POST'])
+@app.route("/withdraw", methods=["POST"])
 def withdraw():
-    username = request.json.get('username')
-    amount = float(request.json.get('amount'))
-    users = load_users()
+    username = request.json["username"]
+    rows = []
+    allowed = False
+    message = "User not found."
 
-    if username not in users:
-        return jsonify({'error': 'User not found'}), 400
+    if os.path.isfile(CSV_FILE):
+        with open(CSV_FILE, "r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row["username"] == username:
+                    last = float(row["lastWithdraw"])
+                    now = time.time()
+                    if now - last >= 3*24*3600:  # 3 days
+                        row["lastWithdraw"] = str(now)
+                        message = "✅ Withdrawal successful! Wait 3 days before next one."
+                        allowed = True
+                    else:
+                        remaining = int((3*24*3600 - (now-last)) / 3600)
+                        message = f"⏳ You must wait {remaining} hours before next withdrawal."
+                rows.append(row)
 
-    user = users[username]
-    now = time.time()
+        with open(CSV_FILE, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=["username","balance","adsWatched","lastWithdraw"])
+            writer.writeheader()
+            writer.writerows(rows)
 
-    # 3-day cooldown = 259200 seconds
-    if now - user['last_withdraw'] < 259200:
-        remaining = 259200 - (now - user['last_withdraw'])
-        return jsonify({'error': f'Wait {int(remaining//3600)}h before next withdrawal'}), 400
+    return jsonify({"message": message})
 
-    if amount > user['credits']:
-        return jsonify({'error': 'Not enough credits'}), 400
-
-    if amount > 80:
-        amount = 80
-
-    user['credits'] -= amount
-    user['last_withdraw'] = now
-    save_users(users)
-    return jsonify({'success': f'Withdraw request of {amount} Robux submitted. Wait up to 1 week.', 'credits': user['credits']})
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
