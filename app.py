@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 import os
 
 app = Flask(__name__)
-
 CSV_FILE = "requests.csv"
 
 # Ensure CSV exists
@@ -13,7 +12,6 @@ if not os.path.exists(CSV_FILE):
         writer = csv.writer(f)
         writer.writerow(["username", "balance", "last_withdraw_date", "withdraw_requests"])
 
-# Helper functions
 def read_users():
     users = {}
     with open(CSV_FILE, newline="") as f:
@@ -30,7 +28,6 @@ def save_users(users):
         for u in users.values():
             writer.writerow(u)
 
-# Routes
 @app.route("/", methods=["GET"])
 def home():
     return render_template("index.html")
@@ -61,7 +58,7 @@ def dashboard(username):
 
 @app.route("/watch_ad", methods=["POST"])
 def watch_ad():
-    username = request.form.get("username")
+    username = request.json.get("username")
     users = read_users()
     if username not in users:
         return jsonify({"error": "User not found"})
@@ -73,31 +70,25 @@ def watch_ad():
 
 @app.route("/withdraw", methods=["POST"])
 def withdraw():
-    username = request.form.get("username")
-    amount = float(request.form.get("amount", 0))
+    username = request.json.get("username")
+    amount = float(request.json.get("amount", 0))
     users = read_users()
     if username not in users:
         return jsonify({"error": "User not found"})
 
     user = users[username]
     now = datetime.now()
-
-    # Check cooldown
     last_date_str = user["last_withdraw_date"]
     if last_date_str:
         last_date = datetime.strptime(last_date_str, "%Y-%m-%d")
         if now < last_date + timedelta(days=3):
             return jsonify({"error": "You must wait 3 days between withdrawals"})
-
-    # Check amount limits
     if amount < 7 or amount > 80:
         return jsonify({"error": "Withdrawal amount must be 7-80 credits"})
-
     balance = float(user["balance"])
     if amount > balance:
         return jsonify({"error": "Not enough balance"})
 
-    # Update balance and withdraw date
     user["balance"] = str(balance - amount)
     user["last_withdraw_date"] = now.strftime("%Y-%m-%d")
     if user["withdraw_requests"]:
