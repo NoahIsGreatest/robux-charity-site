@@ -1,36 +1,87 @@
+<!-- index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Ad Rewards</title>
-  <link rel="stylesheet" href="/static/style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robux Earner</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-  <div class="container">
-    <h1>💸 Ad Rewards</h1>
-
-    <form id="usernameForm">
-      <input type="text" id="username" placeholder="Enter username" required>
-      <button type="submit">Start</button>
-    </form>
-
-    <div id="dashboard" style="display:none;">
-      <p>👤 User: <span id="userDisplay"></span></p>
-      <p>💰 Balance: <span id="balance">0</span> credits</p>
-      <p>📺 Ads Watched: <span id="adsWatched">0</span></p>
-
-      <div id="ad-container">
-        <!-- Real Adsterra Ad Code -->
-        <script async="async" data-cfasync="false" src="//pl27492279.profitableratecpm.com/c5d34ec9928cb43ab18fccd60b4f0067/invoke.js"></script>
-        <div id="container-c5d34ec9928cb43ab18fccd60b4f0067"></div>
-      </div>
-
-      <button id="watchAd">✅ Claim Ad Credit</button>
-      <button id="withdraw">💳 Withdraw</button>
-      <p id="message"></p>
+    <div class="container">
+        <h1>Earn Robux by Watching Ads</h1>
+        <p>Enter your Roblox username, watch ads to earn credits (0.5 per ad). Use credits to withdraw Robux. It may take up to 1 week to receive your Robux. We'll check the records and send it manually from ad revenue.</p>
+        
+        <form id="username-form">
+            <label for="username">Roblox Username:</label>
+            <input type="text" id="username" name="username" required>
+            <button type="submit">Submit</button>
+        </form>
+        
+        <div id="user-info" style="display: none;">
+            <p>Username: <span id="display-username"></span></p>
+            <p>Credits: <span id="credits">0.0</span></p>
+            <button id="watch-ad">Watch Ad</button>
+        </div>
+        
+        <div id="ad-container">
+            <!-- Adsterra Ad Code -->
+            <script async="async" data-cfasync="false" src="//pl27492279.profitableratecpm.com/c5d34ec9928cb43ab18fccd60b4f0067/invoke.js"></script>
+            <div id="container-c5d34ec9928cb43ab18fccd60b4f0067"></div>
+        </div>
     </div>
-  </div>
+    
+    <script>
+        let currentUsername = null;
 
-  <script src="/static/script.js"></script>
+        document.getElementById('username-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            currentUsername = document.getElementById('username').value.trim();
+            if (currentUsername) {
+                document.getElementById('display-username').textContent = currentUsername;
+                document.getElementById('username-form').style.display = 'none';
+                document.getElementById('user-info').style.display = 'block';
+                updateCredits();
+            }
+        });
+
+        document.getElementById('watch-ad').addEventListener('click', function() {
+            if (currentUsername) {
+                fetch('/watch_ad', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username: currentUsername })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.credits !== undefined) {
+                        document.getElementById('credits').textContent = data.credits.toFixed(1);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        });
+
+        function updateCredits() {
+            if (currentUsername) {
+                fetch('/get_credits', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ username: currentUsername })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.credits !== undefined) {
+                        document.getElementById('credits').textContent = data.credits.toFixed(1);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        }
+    </script>
 </body>
 </html>
