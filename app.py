@@ -1,58 +1,55 @@
-from flask import Flask, request, jsonify, render_template
-import csv, os, time
+# app.py
+from flask import Flask, render_template, request, jsonify
+import csv
+import os
+from datetime import datetime
 
 app = Flask(__name__)
 
-CSV_FILE = "requests.csv"
+CSV_FILE = 'requests.csv'
 
-@app.route("/")
-def index():
-    return app.send_static_file("index.html")
-
-@app.route("/save", methods=["POST"])
-def save():
-    data = request.json
-    username = data["username"]
-    balance = data["balance"]
-    ads = data["adsWatched"]
-
-    file_exists = os.path.isfile(CSV_FILE)
-    with open(CSV_FILE, "a", newline="") as f:
+# Initialize CSV if not exists
+if not os.path.exists(CSV_FILE):
+    with open(CSV_FILE, 'w', newline='') as f:
         writer = csv.writer(f)
-        if not file_exists:
-            writer.writerow(["username", "balance", "adsWatched", "lastWithdraw"])
-        writer.writerow([username, balance, ads, "0"])
-    return jsonify({"status": "saved"})
+        writer.writerow(['username', 'credits_earned', 'timestamp'])
 
-@app.route("/withdraw", methods=["POST"])
-def withdraw():
-    username = request.json["username"]
-    rows = []
-    allowed = False
-    message = "User not found."
-
-    if os.path.isfile(CSV_FILE):
-        with open(CSV_FILE, "r") as f:
+def get_total_credits(username):
+    total = 0.0
+    if os.path.exists(CSV_FILE):
+        with open(CSV_FILE, 'r') as f:
             reader = csv.DictReader(f)
             for row in reader:
-                if row["username"] == username:
-                    last = float(row["lastWithdraw"])
-                    now = time.time()
-                    if now - last >= 3*24*3600:  # 3 days
-                        row["lastWithdraw"] = str(now)
-                        message = "✅ Withdrawal successful! Wait 3 days before next one."
-                        allowed = True
-                    else:
-                        remaining = int((3*24*3600 - (now-last)) / 3600)
-                        message = f"⏳ You must wait {remaining} hours before next withdrawal."
-                rows.append(row)
+                if row['username'] == username:
+                    total += float(row['credits_earned'])
+    return total
 
-        with open(CSV_FILE, "w", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=["username","balance","adsWatched","lastWithdraw"])
-            writer.writeheader()
-            writer.writerows(rows)
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-    return jsonify({"message": message})
+@app.route('/get_credits', methods=['POST'])
+def get_credits():
+    data = request.json
+    username = data.get('username')
+    if username:
+        total_credits = get_total_credits(username)
+        return jsonify({'credits': total_credits})
+    return jsonify({'error': 'No username provided'}), 400
 
-if __name__ == "__main__":
+@app.route('/watch_ad', methods=['POST'])
+def watch_ad():
+    data = request.json
+    username = data.get('username')
+    if username:
+        credits_earned = 0.5
+        timestamp = datetime.now().isoformat()
+        with open(CSV_FILE, 'a', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow([username, credits_earned, timestamp])
+        total_credits = get_total_credits(username)
+        return jsonify({'credits': total_credits})
+    return jsonify({'error': 'No username provided'}), 400
+
+if __name__ == '__main__':
     app.run(debug=True)
