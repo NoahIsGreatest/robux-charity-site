@@ -1,10 +1,8 @@
 $(document).ready(function() {
 
-    // Collect credits button
+    // Collect credits
     $("#watchAdBtn").click(function() {
         if(!USERNAME) return alert("User not found");
-
-        // Sends request to Flask backend to add 0.5 credits
         $.ajax({
             type: "POST",
             url: "/watch_ad",
@@ -19,7 +17,7 @@ $(document).ready(function() {
                 }
             },
             error: function() {
-                alert("Error updating credits. Try again.");
+                alert("Error updating credits.");
             }
         });
     });
@@ -33,7 +31,6 @@ $(document).ready(function() {
     $("#confirmWithdraw").click(function(){
         const amount = $("#withdrawAmount").val();
         if(!USERNAME) return alert("User not found");
-
         $.ajax({
             type: "POST",
             url: "/withdraw",
