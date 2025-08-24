@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Robux Charity</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<style>
+body { margin:0; font-family:'Roboto',sans-serif; background:#f0f5f0; display:flex; justify-content:center; align-items:center; height:100vh; overflow:hidden;}
+.container { background:white; border-radius:25px; box-shadow:0 20px 40px rgba(0,0,0,0.2); padding:40px; width:400px; text-align:center; transition:all 0.3s ease; position:relative;}
+h1 { color:#27ae60; font-size:2rem; margin-bottom:10px; }
+p.guide { color:#555; font-size:0.95rem; margin-bottom:20px; }
+input { width:80%; padding:12px; margin:10px 0; border-radius:12px; border:1px solid #ccc; font-size:1rem; transition:all 0.2s ease; }
+input:focus { border-color:#27ae60; outline:none; box-shadow:0 0 8px rgba(39,174,96,0.5); }
+button { padding:12px 25px; border-radius:15px; border:none; background:#27ae60; color:white; font-weight:bold; cursor:pointer; font-size:1rem; transition:all 0.3s ease; margin-top:10px; }
+button:hover { background:#2ecc71; transform:scale(1.05); }
+.profile-section { display:none; margin-top:20px; animation:fadeIn 0.5s ease-in-out; }
+.profile-pic { width:100px; height:100px; border-radius:50%; border:3px solid #27ae60; margin-bottom:10px; transition:all 0.3s ease; }
+.robux-icon { color:#27ae60; margin-right:8px; }
+.progress-bar { width:100%; background:#eee; border-radius:20px; overflow:hidden; margin:15px 0; }
+.progress-fill { height:20px; width:0%; background:#27ae60; border-radius:20px; transition:width 0.5s ease-in-out; }
+.tooltip { position:relative; display:inline-block; cursor:help; }
+.tooltip .tooltiptext { visibility:hidden; width:220px; background-color:#27ae60; color:#fff; text-align:center; padding:6px; border-radius:6px; position:absolute; z-index:1; bottom:125%; left:50%; margin-left:-110px; opacity:0; transition:opacity 0.3s; font-size:0.85rem; }
+.tooltip:hover .tooltiptext { visibility:visible; opacity:1; }
+.notice { font-size:0.85rem; color:#555; margin-top:10px; }
+.coin { position:absolute; font-size:1.5rem; color: #27ae60; animation: floatUp 1s ease-in; pointer-events:none; }
+@keyframes fadeIn { 0% {opacity:0; transform:translateY(-20px);} 100% {opacity:1; transform:translateY(0);} }
+@keyframes floatUp { 0% {opacity:1; transform:translateY(0);} 100% {opacity:0; transform:translateY(-100px);}}
+</style>
+</head>
+<body>
+
+<div class="container">
+    <h1><i class="fa-solid fa-coins robux-icon"></i>Robux Charity</h1>
+    <p class="guide">Enter your Roblox username to start earning credits. Watch ads to earn, then withdraw Robux (max 80). Delivery may take up to 1 week.</p>
+
+    <input type="text" id="username" placeholder="Roblox Username">
+    <button onclick="showProfile()">Next</button>
+
+    <div class="profile-section" id="profile">
+        <img src="https://www.roblox.com/asset/?id=11815930" class="profile-pic" id="avatar">
+        <p id="displayName"></p>
+
+        <button onclick="watchAd()"><i class="fa-solid fa-circle-play robux-icon"></i> Watch Ad (+0.5 credit)</button>
+        <p>Credits: <span id="credits">0</span></p>
+
+        <div class="tooltip">Withdraw Robux
+            <span class="tooltiptext">You can withdraw up to 80 Robux per transaction. Each Robux costs 1 credit.</span>
+        </div>
+        <input type="number" id="robuxAmount" placeholder="Robux Amount">
+        <button onclick="submitRequest()"><i class="fa-solid fa-coins robux-icon"></i> Withdraw</button>
+
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <p class="notice">You might have to wait up to 1 week to receive your Robux.</p>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script>
+let credits = 0;
+
+function showProfile(){
+    let username = document.getElementById('username').value;
+    if(username.length < 3){ alert("Enter a valid username"); return; }
+    document.getElementById('displayName').innerText = username;
+    document.getElementById('profile').style.display = 'block';
+}
+
+function watchAd(){
+    // Placeholder for real ad integration
+    // TODO: Replace with rewarded ad network
+    credits += 0.5;
+    document.getElementById('credits').innerText = credits.toFixed(1);
+    animateCoins();
+    confetti({
+        particleCount: 30,
+        spread: 70,
+        origin: { y: 0.6 }
+    });
+    alert("You earned 0.5 credit! Total credits: " + credits.toFixed(1));
+}
+
+function animateCoins(){
+    for(let i=0;i<5;i++){
+        let coin = document.createElement('div');
+        coin.className='coin';
+        coin.style.left = Math.random()*350+'px';
+        coin.innerHTML='💰';
+        document.body.appendChild(coin);
+        setTimeout(()=>coin.remove(),1000);
+    }
+}
+
+function submitRequest(){
+    let username = document.getElementById('username').value;
+    let robuxAmount = parseFloat(document.getElementById('robuxAmount').value);
+    if(!robuxAmount || robuxAmount <= 0){ alert("Enter a valid amount"); return; }
+    if(robuxAmount > 80){ alert("Max Robux withdraw is 80"); return; }
+    if(credits < robuxAmount){ alert("Not enough credits to withdraw this amount"); return; }
+
+    credits -= robuxAmount;
+    document.getElementById('credits').innerText = credits.toFixed(1);
+
+    let progress = Math.min((robuxAmount/80)*100,100);
+    document.getElementById('progressFill').style.width = progress + '%';
+
+    fetch('/submit',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({username, robux_amount: robuxAmount, credits_used: robuxAmount})
+    }).then(res=>res.json())
+      .then(data=>{
+          if(data.success){
+              alert("Withdraw request saved! You used "+ robuxAmount + " credits for "+robuxAmount+" Robux. Delivery may take up to 1 week.");
+              document.getElementById('robuxAmount').value='';
+          } else {
+              alert("Failed to save withdraw request");
+          }
+      });
+}
+</script>
+
+</body>
+</html>
