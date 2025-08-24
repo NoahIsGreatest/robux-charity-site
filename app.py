@@ -1,81 +1,112 @@
+from flask import Flask, render_template, request, redirect, url_for, jsonify
 import csv
-import os
 from datetime import datetime, timedelta
-from flask import Flask, request, jsonify, session, send_from_directory, render_template
+import os
 
+app = Flask(__name__)
 
-APP_SECRET = os.environ.get("APP_SECRET", "change-me-please")
-CSV_PATH = os.environ.get("CSV_PATH", "requests.csv")
-CREDIT_INCREMENT = 0.5
-WITHDRAW_MIN = 7
-WITHDRAW_MAX = 80
-WITHDRAW_COOLDOWN_DAYS = 3
+CSV_FILE = "requests.csv"
 
+# Ensure CSV exists
+if not os.path.exists(CSV_FILE):
+    with open(CSV_FILE, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["username", "balance", "last_withdraw_date", "withdraw_requests"])
 
-app = Flask(__name__, static_folder="static", template_folder="templates")
-app.secret_key = APP_SECRET
+# Helper functions
+def read_users():
+    users = {}
+    with open(CSV_FILE, newline="") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            users[row["username"]] = row
+    return users
 
+def save_users(users):
+    with open(CSV_FILE, "w", newline="") as f:
+        fieldnames = ["username", "balance", "last_withdraw_date", "withdraw_requests"]
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for u in users.values():
+            writer.writerow(u)
 
-# Ensure CSV has a header
-CSV_HEADER = [
-"timestamp", "username", "action", "amount", "balance", "note"
-]
+# Routes
+@app.route("/", methods=["GET"])
+def home():
+    return render_template("index.html")
 
+@app.route("/submit", methods=["POST"])
+def submit():
+    username = request.form.get("username")
+    if not username:
+        return redirect(url_for("home"))
+    users = read_users()
+    if username not in users:
+        users[username] = {
+            "username": username,
+            "balance": "0",
+            "last_withdraw_date": "",
+            "withdraw_requests": ""
+        }
+        save_users(users)
+    return redirect(url_for("dashboard", username=username))
 
-def ensure_csv():
-if not os.path.exists(CSV_PATH):
-with open(CSV_PATH, "w", newline="", encoding="utf-8") as f:
-writer = csv.writer(f)
-writer.writerow(CSV_HEADER)
+@app.route("/dashboard/<username>")
+def dashboard(username):
+    users = read_users()
+    if username not in users:
+        return redirect(url_for("home"))
+    user = users[username]
+    return render_template("index.html", username=username, balance=user["balance"])
 
+@app.route("/watch_ad", methods=["POST"])
+def watch_ad():
+    username = request.form.get("username")
+    users = read_users()
+    if username not in users:
+        return jsonify({"error": "User not found"})
+    balance = float(users[username]["balance"])
+    balance += 0.5
+    users[username]["balance"] = str(balance)
+    save_users(users)
+    return jsonify({"balance": balance})
 
+@app.route("/withdraw", methods=["POST"])
+def withdraw():
+    username = request.form.get("username")
+    amount = float(request.form.get("amount", 0))
+    users = read_users()
+    if username not in users:
+        return jsonify({"error": "User not found"})
 
+    user = users[username]
+    now = datetime.now()
 
-def append_row(username: str, action: str, amount: float | None, balance: float | None, note: str = ""):
-ensure_csv()
-with open(CSV_PATH, "a", newline="", encoding="utf-8") as f:
-writer = csv.writer(f)
-writer.writerow([
-datetime.utcnow().isoformat(), username, action,
-("" if amount is None else f"{amount:.2f}"),
-("" if balance is None else f"{balance:.2f}"), note
-])
+    # Check cooldown
+    last_date_str = user["last_withdraw_date"]
+    if last_date_str:
+        last_date = datetime.strptime(last_date_str, "%Y-%m-%d")
+        if now < last_date + timedelta(days=3):
+            return jsonify({"error": "You must wait 3 days between withdrawals"})
 
+    # Check amount limits
+    if amount < 7 or amount > 80:
+        return jsonify({"error": "Withdrawal amount must be 7-80 credits"})
 
+    balance = float(user["balance"])
+    if amount > balance:
+        return jsonify({"error": "Not enough balance"})
 
+    # Update balance and withdraw date
+    user["balance"] = str(balance - amount)
+    user["last_withdraw_date"] = now.strftime("%Y-%m-%d")
+    if user["withdraw_requests"]:
+        user["withdraw_requests"] += f";{amount} on {now.strftime('%Y-%m-%d')}"
+    else:
+        user["withdraw_requests"] = f"{amount} on {now.strftime('%Y-%m-%d')}"
+    save_users(users)
+    return jsonify({"success": f"Withdraw request for {amount} credits submitted. It may take up to 1 week to process.", "balance": user["balance"]})
 
-def get_user_events(username: str):
-ensure_csv()
-events = []
-if not os.path.exists(CSV_PATH):
-return events
-with open(CSV_PATH, "r", newline="", encoding="utf-8") as f:
-reader = csv.DictReader(f)
-for row in reader:
-if row.get("username") == username:
-events.append(row)
-return events
-
-
-
-
-def current_balance(username: str) -> float:
-events = get_user_events(username)
-# Balance is derived from the last non-empty balance field; if missing, recompute
-last_with_balance = None
-for row in events:
-if row.get("balance"):
-last_with_balance = float(row["balance"]) # keep updating
-if last_with_balance is not None:
-return last_with_balance
-
-
-# Fallback recompute from actions
-bal = 0.0
-for row in events:
-action = row.get("action", "")
-if action == "credit":
-bal += float(row.get("amount") or 0)
-elif action == "withdraw":
-bal -= float(row.get("amount") or 0)
-app.run(host="0.0.0.0", port=port, debug=True)
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=True)
