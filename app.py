@@ -1,40 +1,38 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 import csv
-from datetime import datetime, timedelta
 import os
+from datetime import datetime, timedelta
 
 app = Flask(__name__)
-CSV_FILE = "requests.csv"
 
-# Ensure CSV exists
-if not os.path.exists(CSV_FILE):
-    with open(CSV_FILE, "w", newline="") as f:
-        writer = csv.writer(f)
-        writer.writerow(["username", "balance", "last_withdraw_date", "withdraw_requests"])
+USERS_FILE = "requests.csv"
 
+# --- Helper functions ---
 def read_users():
     users = {}
-    with open(CSV_FILE, newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            users[row["username"]] = row
+    if os.path.exists(USERS_FILE):
+        with open(USERS_FILE, newline="", encoding="utf-8") as csvfile:
+            reader = csv.DictReader(csvfile)
+            for row in reader:
+                users[row["username"]] = row
     return users
 
 def save_users(users):
-    with open(CSV_FILE, "w", newline="") as f:
+    with open(USERS_FILE, "w", newline="", encoding="utf-8") as csvfile:
         fieldnames = ["username", "balance", "last_withdraw_date", "withdraw_requests"]
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         writer.writeheader()
-        for u in users.values():
-            writer.writerow(u)
+        for user in users.values():
+            writer.writerow(user)
 
-@app.route("/", methods=["GET"])
+# --- Routes ---
+@app.route("/")
 def home():
-    return render_template("index.html")
+    return render_template("index.html", username=None)
 
 @app.route("/submit", methods=["POST"])
 def submit():
-    username = request.form.get("username")
+    username = request.form.get("username").strip()
     if not username:
         return redirect(url_for("home"))
     users = read_users()
@@ -58,46 +56,52 @@ def dashboard(username):
 
 @app.route("/watch_ad", methods=["POST"])
 def watch_ad():
-    username = request.json.get("username")
+    data = request.get_json()
+    username = data.get("username")
+    if not username:
+        return jsonify({"error": "User not found"})
     users = read_users()
     if username not in users:
         return jsonify({"error": "User not found"})
-    balance = float(users[username]["balance"])
-    balance += 0.5
+    # Add 0.5 credits
+    balance = float(users[username]["balance"]) + 0.5
     users[username]["balance"] = str(balance)
     save_users(users)
     return jsonify({"balance": balance})
 
 @app.route("/withdraw", methods=["POST"])
 def withdraw():
-    username = request.json.get("username")
-    amount = float(request.json.get("amount", 0))
+    data = request.get_json()
+    username = data.get("username")
+    amount = float(data.get("amount", 0))
     users = read_users()
     if username not in users:
         return jsonify({"error": "User not found"})
-
     user = users[username]
-    now = datetime.now()
-    last_date_str = user["last_withdraw_date"]
+
+    # Withdraw cooldown 3 days
+    last_date_str = user.get("last_withdraw_date", "")
     if last_date_str:
         last_date = datetime.strptime(last_date_str, "%Y-%m-%d")
-        if now < last_date + timedelta(days=3):
-            return jsonify({"error": "You must wait 3 days between withdrawals"})
-    if amount < 7 or amount > 80:
-        return jsonify({"error": "Withdrawal amount must be 7-80 credits"})
-    balance = float(user["balance"])
-    if amount > balance:
-        return jsonify({"error": "Not enough balance"})
+        if datetime.now() < last_date + timedelta(days=3):
+            return jsonify({"error": "You can only withdraw every 3 days."})
 
-    user["balance"] = str(balance - amount)
-    user["last_withdraw_date"] = now.strftime("%Y-%m-%d")
+    # Check amount limits
+    if amount < 7 or amount > 80:
+        return jsonify({"error": "Withdrawal must be between 7 and 80 credits."})
+
+    if float(user["balance"]) < amount:
+        return jsonify({"error": "Insufficient balance."})
+
+    # Update balance and last withdraw
+    user["balance"] = str(float(user["balance"]) - amount)
+    user["last_withdraw_date"] = datetime.now().strftime("%Y-%m-%d")
     if user["withdraw_requests"]:
-        user["withdraw_requests"] += f";{amount} on {now.strftime('%Y-%m-%d')}"
+        user["withdraw_requests"] += f";{amount}-{datetime.now().strftime('%Y-%m-%d')}"
     else:
-        user["withdraw_requests"] = f"{amount} on {now.strftime('%Y-%m-%d')}"
+        user["withdraw_requests"] = f"{amount}-{datetime.now().strftime('%Y-%m-%d')}"
     save_users(users)
-    return jsonify({"success": f"Withdraw request for {amount} credits submitted. It may take up to 1 week to process.", "balance": user["balance"]})
+    return jsonify({"success": f"Withdraw request of {amount} submitted! It may take up to 1 week.", "balance": user["balance"]})
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=True)
+    app.run(debug=True)
