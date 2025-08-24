@@ -1,49 +1,29 @@
-body {
-    font-family: Arial, sans-serif;
-    background: linear-gradient(to right, #6a11cb, #2575fc);
-    color: #fff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-}
+$(document).ready(function(){
+    $("#watchAd").click(function(){
+        $.post("/watch_ad", {username: "{{ username }}"}, function(data){
+            if(data.balance !== undefined){
+                $("#balance").text(data.balance);
+                alert("+0.5 credits added!");
+            } else {
+                alert(data.error);
+            }
+        });
+    });
 
-.container {
-    text-align: center;
-}
+    $("#withdrawBtn").click(function(){
+        $("#withdrawForm").toggle();
+    });
 
-.login-box, .dashboard {
-    background: rgba(255, 255, 255, 0.1);
-    padding: 30px;
-    border-radius: 15px;
-    animation: fadeIn 1s ease-in;
-}
-
-input {
-    padding: 10px;
-    margin: 10px;
-    border-radius: 10px;
-    border: none;
-}
-
-button {
-    padding: 10px 20px;
-    margin: 10px;
-    border-radius: 10px;
-    border: none;
-    background: #fff;
-    color: #333;
-    cursor: pointer;
-    transition: 0.3s;
-}
-
-button:hover {
-    transform: scale(1.05);
-    background: #f1f1f1;
-}
-
-@keyframes fadeIn {
-    from {opacity:0;}
-    to {opacity:1;}
-}
-
+    $("#confirmWithdraw").click(function(){
+        var amount = $("#withdrawAmount").val();
+        $.post("/withdraw", {username: "{{ username }}", amount: amount}, function(data){
+            if(data.success){
+                alert(data.success);
+                $("#balance").text(data.balance);
+                $("#withdrawForm").hide();
+            } else {
+                alert(data.error);
+            }
+        });
+    });
+});
