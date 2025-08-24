@@ -1,30 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Earn Credits by Watching Ads</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <title>Ad Rewards</title>
+  <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
-    <div class="container">
-        <h1>Earn by Watching Ads</h1>
-        <p>Your Balance: <span id="balance">0</span> credits</p>
+  <div class="container">
+    <h1>💸 Ad Rewards</h1>
 
-        <!-- Button to trigger ad -->
-        <button id="watchAdBtn">🎥 Watch Ad</button>
+    <form id="usernameForm">
+      <input type="text" id="username" placeholder="Enter username" required>
+      <button type="submit">Start</button>
+    </form>
 
-        <!-- Ad container (Adsterra code) -->
-        <div id="adContainer" style="margin-top:20px; display:none;">
-            <script async="async" data-cfasync="false" src="//pl27492279.profitableratecpm.com/c5d34ec9928cb43ab18fccd60b4f0067/invoke.js"></script>
-            <div id="container-c5d34ec9928cb43ab18fccd60b4f0067"></div>
-        </div>
+    <div id="dashboard" style="display:none;">
+      <p>👤 User: <span id="userDisplay"></span></p>
+      <p>💰 Balance: <span id="balance">0</span> credits</p>
+      <p>📺 Ads Watched: <span id="adsWatched">0</span></p>
 
-        <!-- Withdraw button -->
-        <button id="withdrawBtn">💸 Withdraw</button>
-        <p id="status"></p>
+      <div id="ad-container">
+        <!-- Real Adsterra Ad Code -->
+        <script async="async" data-cfasync="false" src="//pl27492279.profitableratecpm.com/c5d34ec9928cb43ab18fccd60b4f0067/invoke.js"></script>
+        <div id="container-c5d34ec9928cb43ab18fccd60b4f0067"></div>
+      </div>
+
+      <button id="watchAd">✅ Claim Ad Credit</button>
+      <button id="withdraw">💳 Withdraw</button>
+      <p id="message"></p>
     </div>
+  </div>
 
-    <script src="script.js"></script>
+  <script src="/static/script.js"></script>
 </body>
 </html>
