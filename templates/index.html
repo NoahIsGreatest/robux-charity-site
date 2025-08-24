@@ -13,6 +13,7 @@
 <body>
 <div class="container">
     {% if not username %}
+    <!-- Login / Username Input -->
     <div class="login-card">
         <h1>Welcome to Robux Charity</h1>
         <form action="{{ url_for('submit') }}" method="post">
@@ -21,6 +22,7 @@
         </form>
     </div>
     {% else %}
+    <!-- Dashboard -->
     <div class="dashboard">
         <div class="profile-card">
             <h2>{{ username }}</h2>
@@ -31,9 +33,11 @@
         </div>
         <div class="ad-card">
             <p>Watch Ad</p>
+            <!-- ADSTERIA CONTAINER: Must be visible and loaded on page load -->
             <div id="ad-container" style="width: 300px; height: 250px; margin: 10px auto;">
                 <script async data-cfasync="false" src="//pl27492279.profitableratecpm.com/c5d34ec9928cb43ab18fccd60b4f0067/invoke.js"></script>
             </div>
+            <!-- Collect credits after viewing -->
             <button id="watchAdBtn">Collect +0.5 credits</button>
         </div>
         <div class="withdraw-card">
