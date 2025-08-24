@@ -10,29 +10,42 @@
 <body>
     <div class="container">
         <h1>Earn Robux by Watching Ads</h1>
-        <p>Enter your Roblox username, watch ads to earn credits (0.5 per ad). Use credits to withdraw Robux. It may take up to 1 week to receive your Robux. We'll check the records and send it manually from ad revenue.</p>
+        <p class="intro">Enter your Roblox username to get started. Watch ads to earn credits (0.5 per ad). Use your credits to withdraw Robux (1 credit = 1 Robux). Withdrawals may take up to 1 week to process manually from ad revenue.</p>
         
         <form id="username-form">
             <label for="username">Roblox Username:</label>
             <input type="text" id="username" name="username" required>
-            <button type="submit">Submit</button>
+            <button type="submit">Get Started</button>
         </form>
         
         <div id="user-info" style="display: none;">
-            <p>Username: <span id="display-username"></span></p>
-            <p>Credits: <span id="credits">0.0</span></p>
-            <button id="watch-ad">Watch Ad</button>
-        </div>
-        
-        <div id="ad-container">
-            <!-- Adsterra Ad Code -->
-            <script async="async" data-cfasync="false" src="//pl27492279.profitableratecpm.com/c5d34ec9928cb43ab18fccd60b4f0067/invoke.js"></script>
-            <div id="container-c5d34ec9928cb43ab18fccd60b4f0067"></div>
+            <div class="profile">
+                <img id="avatar" src="" alt="Profile Avatar" class="avatar">
+                <p>Username: <span id="display-username"></span></p>
+            </div>
+            <p class="credits">Credits: <span id="credits">0.0</span></p>
+            
+            <div class="ad-section">
+                <button id="watch-ad">Watch Ad (+0.5 Credits)</button>
+                <div id="ad-container">
+                    <!-- Adsterra Ad Code -->
+                    <script async="async" data-cfasync="false" src="//pl27492279.profitableratecpm.com/c5d34ec9928cb43ab18fccd60b4f0067/invoke.js"></script>
+                    <div id="container-c5d34ec9928cb43ab18fccd60b4f0067"></div>
+                </div>
+            </div>
+            
+            <div class="withdraw-section">
+                <label for="robux-amount">Robux to Withdraw:</label>
+                <input type="number" id="robux-amount" min="1" step="1" placeholder="Enter amount">
+                <button id="withdraw">Withdraw Robux</button>
+                <p id="withdraw-message" class="message"></p>
+            </div>
         </div>
     </div>
     
     <script>
         let currentUsername = null;
+        let currentCredits = 0.0;
 
         document.getElementById('username-form').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -41,6 +54,23 @@
                 document.getElementById('display-username').textContent = currentUsername;
                 document.getElementById('username-form').style.display = 'none';
                 document.getElementById('user-info').style.display = 'block';
+                
+                // Fetch avatar
+                fetch('/get_avatar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ username: currentUsername })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.avatar_url) {
+                        document.getElementById('avatar').src = data.avatar_url;
+                    } else {
+                        document.getElementById('avatar').src = 'https://via.placeholder.com/150?text=User'; // Fallback
+                    }
+                })
+                .catch(error => console.error('Error fetching avatar:', error));
+                
                 updateCredits();
             }
         });
@@ -49,18 +79,58 @@
             if (currentUsername) {
                 fetch('/watch_ad', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ username: currentUsername })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.credits !== undefined) {
-                        document.getElementById('credits').textContent = data.credits.toFixed(1);
+                        currentCredits = data.credits;
+                        document.getElementById('credits').textContent = currentCredits.toFixed(1);
                     }
                 })
                 .catch(error => console.error('Error:', error));
+            }
+        });
+
+        document.getElementById('withdraw').addEventListener('click', function() {
+            if (currentUsername) {
+                const amount = parseFloat(document.getElementById('robux-amount').value);
+                const messageEl = document.getElementById('withdraw-message');
+                messageEl.textContent = '';
+                if (amount > 0 && Number.isInteger(amount)) {
+                    if (amount <= currentCredits) {
+                        fetch('/withdraw', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({ username: currentUsername, amount: amount })
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                return response.json().then(err => { throw err; });
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (data.credits !== undefined) {
+                                currentCredits = data.credits;
+                                document.getElementById('credits').textContent = currentCredits.toFixed(1);
+                                messageEl.textContent = 'Withdrawal requested successfully!';
+                                messageEl.classList.add('success');
+                            }
+                        })
+                        .catch(err => {
+                            messageEl.textContent = err.error || 'Error processing withdrawal.';
+                            messageEl.classList.add('error');
+                        });
+                    } else {
+                        messageEl.textContent = 'Insufficient credits.';
+                        messageEl.classList.add('error');
+                    }
+                } else {
+                    messageEl.textContent = 'Enter a valid positive integer amount.';
+                    messageEl.classList.add('error');
+                }
             }
         });
 
@@ -68,15 +138,14 @@
             if (currentUsername) {
                 fetch('/get_credits', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ username: currentUsername })
                 })
                 .then(response => response.json())
                 .then(data => {
                     if (data.credits !== undefined) {
-                        document.getElementById('credits').textContent = data.credits.toFixed(1);
+                        currentCredits = data.credits;
+                        document.getElementById('credits').textContent = currentCredits.toFixed(1);
                     }
                 })
                 .catch(error => console.error('Error:', error));
