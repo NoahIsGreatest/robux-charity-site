@@ -1,78 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Robux Charity</title>
-<link rel="stylesheet" href="style.css">
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earn Credits by Watching Ads</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<div class="container">
-    <h1>Robux Charity</h1>
-    <input type="text" id="username" placeholder="Enter your username">
+    <div class="container">
+        <h1>Earn by Watching Ads</h1>
+        <p>Your Balance: <span id="balance">0</span> credits</p>
 
-    <div class="credits">
-        <p>Credits: <span id="credits">0</span></p>
-        <p>Ads watched: <span id="adsWatched">0</span></p>
+        <!-- Button to trigger ad -->
+        <button id="watchAdBtn">🎥 Watch Ad</button>
+
+        <!-- Ad container (Adsterra code) -->
+        <div id="adContainer" style="margin-top:20px; display:none;">
+            <script async="async" data-cfasync="false" src="//pl27492279.profitableratecpm.com/c5d34ec9928cb43ab18fccd60b4f0067/invoke.js"></script>
+            <div id="container-c5d34ec9928cb43ab18fccd60b4f0067"></div>
+        </div>
+
+        <!-- Withdraw button -->
+        <button id="withdrawBtn">💸 Withdraw</button>
+        <p id="status"></p>
     </div>
 
-    <div class="ads">
-        <h2>Watch Ads to Earn Credits</h2>
-        <!-- Adsterra code -->
-        <script async="async" data-cfasync="false" src="//pl27492279.profitableratecpm.com/c5d34ec9928cb43ab18fccd60b4f0067/invoke.js"></script>
-        <div id="container-c5d34ec9928cb43ab18fccd60b4f0067"></div>
-        <button id="watchAdBtn">I Watched Ad (+0.5 credit)</button>
-    </div>
-
-    <div class="withdraw">
-        <h2>Withdraw Robux</h2>
-        <input type="number" id="withdrawAmount" placeholder="Amount (max 80)">
-        <button id="withdrawBtn">Withdraw</button>
-        <p id="withdrawMsg"></p>
-    </div>
-</div>
-
-<script>
-$(document).ready(function() {
-    let username = '';
-
-    $('#username').on('input', function() {
-        username = $(this).val();
-    });
-
-    $('#watchAdBtn').click(function() {
-        if(!username){ alert('Enter username!'); return; }
-        $.ajax({
-            url: '/watch_ad',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({username: username}),
-            success: function(res){
-                $('#credits').text(res.credits);
-                $('#adsWatched').text(res.ads_watched);
-            }
-        });
-    });
-
-    $('#withdrawBtn').click(function() {
-        if(!username){ alert('Enter username!'); return; }
-        let amount = $('#withdrawAmount').val();
-        $.ajax({
-            url: '/withdraw',
-            type: 'POST',
-            contentType: 'application/json',
-            data: JSON.stringify({username: username, amount: amount}),
-            success: function(res){
-                $('#withdrawMsg').text(res.success);
-                $('#credits').text(res.credits);
-            },
-            error: function(xhr){
-                $('#withdrawMsg').text(xhr.responseJSON.error);
-            }
-        });
-    });
-});
-</script>
+    <script src="script.js"></script>
 </body>
 </html>
