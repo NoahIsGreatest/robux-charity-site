@@ -1,6 +1,10 @@
 $(document).ready(function() {
+
+    // Collect credits button
     $("#watchAdBtn").click(function() {
         if(!USERNAME) return alert("User not found");
+
+        // Sends request to Flask backend to add 0.5 credits
         $.ajax({
             type: "POST",
             url: "/watch_ad",
@@ -13,17 +17,23 @@ $(document).ready(function() {
                 } else {
                     alert(data.error);
                 }
+            },
+            error: function() {
+                alert("Error updating credits. Try again.");
             }
         });
     });
 
+    // Toggle withdraw form
     $("#withdrawBtn").click(function(){
         $("#withdrawForm").toggle();
     });
 
+    // Submit withdraw request
     $("#confirmWithdraw").click(function(){
         const amount = $("#withdrawAmount").val();
         if(!USERNAME) return alert("User not found");
+
         $.ajax({
             type: "POST",
             url: "/withdraw",
@@ -37,6 +47,9 @@ $(document).ready(function() {
                 } else {
                     alert(data.error);
                 }
+            },
+            error: function() {
+                alert("Error submitting withdraw request.");
             }
         });
     });
