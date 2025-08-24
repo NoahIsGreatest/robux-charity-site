@@ -1,37 +1,38 @@
+let username = "";
 let balance = 0;
-let lastWithdraw = null;
+let adsWatched = 0;
 
-// Show ad when clicking "Watch Ad"
-document.getElementById("watchAdBtn").addEventListener("click", () => {
-    let adContainer = document.getElementById("adContainer");
-    adContainer.style.display = "block";
-
-    // Simulate waiting 10 seconds for user to see ad
-    setTimeout(() => {
-        balance += 0.5;
-        document.getElementById("balance").innerText = balance.toFixed(1);
-        alert("✅ You earned 0.5 credits!");
-        
-        // Hide ad container again so it's clean
-        adContainer.style.display = "none";
-    }, 10000); // 10 sec "watch time"
+document.getElementById("usernameForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  username = document.getElementById("username").value;
+  document.getElementById("userDisplay").textContent = username;
+  document.getElementById("usernameForm").style.display = "none";
+  document.getElementById("dashboard").style.display = "block";
 });
 
-// Withdraw system with 3-day lock
-document.getElementById("withdrawBtn").addEventListener("click", () => {
-    let now = new Date();
+document.getElementById("watchAd").addEventListener("click", function() {
+  // User must actually load the ad (we just simulate with button click)
+  balance += 0.5;
+  adsWatched++;
+  document.getElementById("balance").textContent = balance.toFixed(2);
+  document.getElementById("adsWatched").textContent = adsWatched;
 
-    if (lastWithdraw && (now - lastWithdraw) < (3 * 24 * 60 * 60 * 1000)) {
-        document.getElementById("status").innerText = "❌ You can only withdraw once every 3 days!";
-        return;
-    }
+  // Save to backend
+  fetch("/save", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({username, balance, adsWatched})
+  });
+});
 
-    if (balance >= 5) { // Example threshold
-        document.getElementById("status").innerText = "✅ Withdrawal request sent!";
-        balance = 0;
-        document.getElementById("balance").innerText = balance.toFixed(1);
-        lastWithdraw = now;
-    } else {
-        document.getElementById("status").innerText = "❌ Minimum 5 credits required to withdraw.";
-    }
+document.getElementById("withdraw").addEventListener("click", function() {
+  fetch("/withdraw", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({username})
+  })
+  .then(res => res.json())
+  .then(data => {
+    document.getElementById("message").textContent = data.message;
+  });
 });
